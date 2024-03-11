@@ -1,73 +1,95 @@
-class Task:
-    def __init__(self, description, priority, due_date):
-        self.description = description
-        self.priority = priority
-        self.due_date = due_date
-        self.completed = False
+import json
+import os
+import matplotlib.pyplot as plt
 
-class ToDoList:
-    def __init__(self):
-        self.tasks = []
+class BudgetTracker:
+    def __init__(self, filename="transactions.json"):
+        self.filename = filename
+        self.transactions = []
+        self.load_transactions()
 
-    def add_task(self, task):
-        self.tasks.append(task)
+    def load_transactions(self):
+        if os.path.exists(self.filename):
+            with open(self.filename, 'r') as file:
+                self.transactions = json.load(file)
 
-    def remove_task(self, task):
-        self.tasks.remove(task)
+    def save_transactions(self):
+        with open(self.filename, 'w') as file:
+            json.dump(self.transactions, file, indent=4)
 
-    def mark_completed(self, task):
-        task.completed = True
+    def add_transaction(self, category, amount, transaction_type):
+        transaction = {"category": category, "amount": amount, "type": transaction_type}
+        self.transactions.append(transaction)
+        self.save_transactions()
 
-    def display_tasks(self):
-        for task in self.tasks:
-            status = "✓" if task.completed else " "
-            print(f"{status} {task.description} (Priority: {task.priority}, Due: {task.due_date})")
+    def calculate_budget(self):
+        income = sum(transaction["amount"] for transaction in self.transactions if transaction["type"] == "income")
+        expenses = sum(transaction["amount"] for transaction in self.transactions if transaction["type"] == "expense")
+        remaining_budget = income - expenses
+        return remaining_budget
+
+    def analyze_expenses(self):
+        expense_categories = {}
+        for transaction in self.transactions:
+            if transaction["type"] == "expense":
+                category = transaction["category"]
+                amount = transaction["amount"]
+                if category in expense_categories:
+                    expense_categories[category] += amount
+                else:
+                    expense_categories[category] = amount
+        return expense_categories
 
 def main():
-    todo_list = ToDoList()
+    budget_tracker = BudgetTracker()
 
     while True:
-        print("\n--- To-Do List ---")
-        print("1. Add Task")
-        print("2. Remove Task")
-        print("3. Mark Task as Completed")
-        print("4. Display Tasks")
-        print("5. Exit")
+        print("\nBUDGET TRACKER")
+        print("1. Add Income")
+        print("2. Add Expense")
+        print("3. Calculate Remaining Budget")
+        print("4. Analyze Expenses")
+        print("5. Quit")
 
         choice = input("Enter your choice: ")
 
         if choice == "1":
-            description = input("Enter task description: ")
-            priority = input("Enter task priority (high/medium/low): ")
-            due_date = input("Enter due date (DD-MM-YYYY): ")
-            task = Task(description, priority, due_date)
-            todo_list.add_task(task)
-            print("Task added successfully!")
+            category = input("Enter income category: ")
+            amount = float(input("Enter income amount: "))
+            budget_tracker.add_transaction(category, amount, "income")
+            print("Income added.")
 
         elif choice == "2":
-            description = input("Enter task description to remove: ")
-            matching_tasks = [task for task in todo_list.tasks if task.description == description]
-            if matching_tasks:
-                todo_list.remove_task(matching_tasks[0])
-                print("Task removed successfully!")
-            else:
-                print("Task not found.")
+            category = input("Enter expense category: ")
+            amount = float(input("Enter expense amount: "))
+            budget_tracker.add_transaction(category, amount, "expense")
+            print("Expense added.")
 
         elif choice == "3":
-            description = input("Enter task description to mark as completed: ")
-            matching_tasks = [task for task in todo_list.tasks if task.description == description]
-            if matching_tasks:
-                todo_list.mark_completed(matching_tasks[0])
-                print("Task marked as completed!")
-            else:
-                print("Task not found.")
+            remaining_budget = budget_tracker.calculate_budget()
+            print(f"Remaining budget: {remaining_budget}")
 
         elif choice == "4":
-            todo_list.display_tasks()
+            expense_categories = budget_tracker.analyze_expenses()
+            print("\nEXPENSE ANALYSIS:")
+            for category, amount in expense_categories.items():
+                print(f"{category}: {amount}")
+            
+            # Plotting the bar graph
+            plt.bar(expense_categories.keys(), expense_categories.values(), color='skyblue')
+            plt.xlabel('Expense Categories')
+            plt.ylabel('Amount')
+            plt.title('Expense Analysis')
+            plt.xticks(rotation=45, ha='right')
+            plt.tight_layout()
+            plt.show()
 
         elif choice == "5":
-            print("Exiting. Have a productive day!")
+            print("Exiting...")
             break
+
+        else:
+            print("Invalid choice. Please try again.")
 
 if __name__ == "__main__":
     main()
